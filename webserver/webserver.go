@@ -53,6 +53,8 @@ func (ws *WebServer) handleRequest(conn net.Conn) *Response {
 		log.Println("Invalid request line:", requestLine)
 		return NewResponse(http.StatusBadRequest, []byte("Bad Request"))
 	}
+	// the path is the second part of the request line
+	// request structure: GET /path HTTP/1.1
 	rawPath := requestLineParts[1]
 	path := filepath.Clean(rawPath)
 	if path == "/" {
