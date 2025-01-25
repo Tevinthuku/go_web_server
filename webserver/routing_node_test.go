@@ -8,11 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRoutingNode(t *testing.T) {
+func TestStaticRoutingNode(t *testing.T) {
 	ut := webserver.NewRoutingNode()
-	ut.AddPattern("/hello/world", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ut.AddPattern("GET", "/hello/world", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World!"))
-	}), "GET")
+	}))
 	handler, err := ut.MatchMethodAndPath("GET", "/hello/world")
 	assert.Nil(t, err)
 	assert.NotNil(t, handler)
@@ -24,4 +24,11 @@ func TestRoutingNode(t *testing.T) {
 	handler, err = ut.MatchMethodAndPath("PATCH", "/hello/world/")
 	assert.Nil(t, handler)
 	assert.NotNil(t, err)
+
+	ut.AddPattern("GET", "/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello, root!"))
+	}))
+	handler, err = ut.MatchMethodAndPath("GET", "/")
+	assert.Nil(t, err)
+	assert.NotNil(t, handler)
 }

@@ -14,22 +14,17 @@ type RoutingNode struct {
 }
 
 func NewRoutingNode() *RoutingNode {
-	return &RoutingNode{path_segment: "/", children: make(map[string]*RoutingNode)}
+	return newBlankRoutingNode("/")
 }
 
-func (ut *RoutingNode) AddPattern(url string, handler http.Handler, method string) {
+func (ut *RoutingNode) AddPattern(method string, url string, handler http.Handler) {
 	split_url := strings.Split(url, "/")
-	fmt.Println(split_url)
 	current_node := ut
 	for _, segment := range split_url {
 		if _, ok := current_node.children[segment]; ok {
 			current_node = current_node.children[segment]
 		} else {
-			current_node.children[segment] = &RoutingNode{
-				path_segment: segment,
-				handlers:     make(map[string]http.Handler),
-				children:     make(map[string]*RoutingNode),
-			}
+			current_node.children[segment] = newBlankRoutingNode(segment)
 			current_node = current_node.children[segment]
 		}
 	}
@@ -50,4 +45,8 @@ func (ut *RoutingNode) MatchMethodAndPath(method, path string) (http.Handler, er
 		return nil, fmt.Errorf("no handler found for method %s", method)
 	}
 	return handler, nil
+}
+
+func newBlankRoutingNode(path_segment string) *RoutingNode {
+	return &RoutingNode{path_segment: path_segment, handlers: make(map[string]http.Handler), children: make(map[string]*RoutingNode)}
 }
