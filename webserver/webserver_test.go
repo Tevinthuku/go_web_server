@@ -20,6 +20,7 @@ func TestWebServer(t *testing.T) {
 
 	wb := webserver.NewWebServer(listener, "../www")
 	go wb.Start()
+	defer wb.Close()
 
 	tests := []struct {
 		name           string

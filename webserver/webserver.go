@@ -30,6 +30,10 @@ func (ws *WebServer) Start() {
 	}
 }
 
+func (ws *WebServer) Close() error {
+	return ws.listener.Close()
+}
+
 func (ws *WebServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	response := ws.handleRequest(conn)

@@ -18,5 +18,7 @@ func main() {
 		rootDirEnv = "./www"
 	}
 	wb := webserver.NewWebServer(listner, rootDirEnv)
+	defer wb.Close()
+
 	wb.Start()
 }
