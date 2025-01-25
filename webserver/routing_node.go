@@ -6,19 +6,19 @@ import (
 	"strings"
 )
 
-type RoutingNode struct {
+type routingNode struct {
 	path_segment string
 	is_dynamic   bool
 	// handlers is a map of HTTP methods to handlers
 	handlers map[string]http.Handler
-	children map[string]*RoutingNode
+	children map[string]*routingNode
 }
 
-func NewRoutingNode() *RoutingNode {
+func NewRoutingNode() *routingNode {
 	return newBlankRoutingNode("/", false)
 }
 
-func (ut *RoutingNode) AddPattern(method string, url string, handler http.Handler) {
+func (ut *routingNode) AddPattern(method string, url string, handler http.Handler) {
 	split_url := strings.Split(url, "/")
 	current_node := ut
 	for _, segment := range split_url {
@@ -36,12 +36,12 @@ func (ut *RoutingNode) AddPattern(method string, url string, handler http.Handle
 	current_node.handlers[method] = handler
 }
 
-type HandlerWithDynamicContent struct {
+type handlerWithDynamicContent struct {
 	Handler        http.Handler
 	DynamicContent map[string]interface{}
 }
 
-func (ut *RoutingNode) MatchMethodAndPath(method, path string) (*HandlerWithDynamicContent, error) {
+func (ut *routingNode) MatchMethodAndPath(method, path string) (*handlerWithDynamicContent, error) {
 	split_url := strings.Split(path, "/")
 	dynamic_content := map[string]interface{}{}
 	current_node := ut
@@ -69,12 +69,12 @@ func (ut *RoutingNode) MatchMethodAndPath(method, path string) (*HandlerWithDyna
 	if !ok {
 		return nil, fmt.Errorf("no handler found for method %s", method)
 	}
-	return &HandlerWithDynamicContent{
+	return &handlerWithDynamicContent{
 		Handler:        handler,
 		DynamicContent: dynamic_content,
 	}, nil
 }
 
-func newBlankRoutingNode(path_segment string, is_dynamic bool) *RoutingNode {
-	return &RoutingNode{path_segment: path_segment, is_dynamic: is_dynamic, handlers: make(map[string]http.Handler), children: make(map[string]*RoutingNode)}
+func newBlankRoutingNode(path_segment string, is_dynamic bool) *routingNode {
+	return &routingNode{path_segment: path_segment, is_dynamic: is_dynamic, handlers: make(map[string]http.Handler), children: make(map[string]*routingNode)}
 }

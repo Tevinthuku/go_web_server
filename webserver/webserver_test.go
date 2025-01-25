@@ -10,16 +10,14 @@ import (
 )
 
 func TestWebServer(t *testing.T) {
-	listener, err := net.Listen("tcp", "localhost:8080")
+
+	addr := ":8080"
+
+	wb := webserver.NewWebServer("../www")
+	err := wb.Run(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
-
-	addr := listener.Addr().String()
-
-	wb := webserver.NewWebServer(listener, "../www")
-	go wb.Start()
 	defer wb.Close()
 
 	tests := []struct {

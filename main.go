@@ -17,8 +17,8 @@ func main() {
 	if rootDirEnv == "" {
 		rootDirEnv = "./www"
 	}
-	wb := webserver.NewWebServer(listner, rootDirEnv)
+	wb := webserver.NewWebServer(rootDirEnv)
 	defer wb.Close()
 
-	wb.Start()
+	wb.Run(":8080")
 }

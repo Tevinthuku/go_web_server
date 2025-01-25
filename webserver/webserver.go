@@ -13,13 +13,24 @@ import (
 type WebServer struct {
 	listener net.Listener
 	rootDir  string
+	rn       *routingNode
 }
 
-func NewWebServer(listener net.Listener, rootDir string) *WebServer {
-	return &WebServer{listener: listener, rootDir: rootDir}
+func NewWebServer(rootDir string) *WebServer {
+	return &WebServer{rootDir: rootDir, rn: NewRoutingNode()}
 }
 
-func (ws *WebServer) Start() {
+func (ws *WebServer) Run(addr string) error {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	ws.listener = listener
+	go ws.start()
+	return nil
+}
+
+func (ws *WebServer) start() {
 	for {
 		conn, err := ws.listener.Accept()
 		if err != nil {
