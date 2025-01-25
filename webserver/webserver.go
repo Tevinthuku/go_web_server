@@ -5,8 +5,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -47,42 +45,41 @@ func (ws *WebServer) Close() error {
 
 func (ws *WebServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	response := ws.handleRequest(conn)
-	_, err := response.WriteTo(conn)
-	if err != nil {
-		log.Println("Error writing response:", err)
-	}
+	ws.handleRequest(conn)
 }
 
-func (ws *WebServer) handleRequest(conn net.Conn) *Response {
+func (ws *WebServer) handleRequest(conn net.Conn) {
+	reader := bufio.NewReader(conn)
 	// Read the request line
 	// GET /path HTTP/1.1
-	reader := bufio.NewReader(conn)
 	requestLine, err := reader.ReadString('\n')
 	if err != nil {
 		log.Println("Error reading request line:", err)
-		return NewResponse(http.StatusBadRequest, []byte("Bad Request"))
+		response := NewResponse(http.StatusBadRequest, []byte("Bad Request"))
+		response.WriteTo(conn)
+		return
 	}
 	requestLineParts := strings.Split(requestLine, " ")
 	if len(requestLineParts) != 3 {
 		log.Println("Invalid request line:", requestLine)
-		return NewResponse(http.StatusBadRequest, []byte("Bad Request"))
+		response := NewResponse(http.StatusBadRequest, []byte("Bad Request"))
+		response.WriteTo(conn)
+		return
 	}
-	// the path is the second part of the request line
+	// the METHOD is the first part and the PATH is the second part of the request line
 	// request structure: GET /path HTTP/1.1
-	rawPath := requestLineParts[1]
-	path := filepath.Clean(rawPath)
-	if path == "/" {
-		path = "/index.html"
-	}
-	directory := filepath.Join(ws.rootDir, path)
-	if !strings.HasPrefix(directory, filepath.Clean(ws.rootDir)) {
-		return NewResponse(http.StatusForbidden, []byte("Forbidden path"))
-	}
-	body, err := os.ReadFile(directory)
+	method, rawPath := requestLineParts[0], requestLineParts[1]
+	handler, err := ws.rn.MatchMethodAndPath(method, rawPath)
 	if err != nil {
-		log.Println("Error reading file:", err)
-		return NewResponse(http.StatusNotFound, []byte("File not found"))
+		response := NewResponse(http.StatusNotFound, []byte("Not Found"))
+		response.WriteTo(conn)
+		return
 	}
-	return NewResponse(http.StatusOK, body)
+	req := Request{
+		Method:    method,
+		Path:      rawPath,
+		UrlValues: handler.DynamicContent,
+	}
+	handler.Handler(conn, &req)
+
 }

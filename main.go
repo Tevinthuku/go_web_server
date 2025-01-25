@@ -20,5 +20,9 @@ func main() {
 	wb := webserver.NewWebServer(rootDirEnv)
 	defer wb.Close()
 
-	wb.Run(":8080")
+	RegisterRoutes(wb)
+
+	if err := wb.Run(":8080"); err != nil {
+		log.Fatal(err)
+	}
 }

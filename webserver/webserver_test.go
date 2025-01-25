@@ -18,6 +18,7 @@ func TestWebServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	defer wb.Close()
 
 	tests := []struct {

@@ -2,7 +2,7 @@ package webserver
 
 import (
 	"fmt"
-	"net/http"
+	"io"
 	"strings"
 )
 
@@ -10,15 +10,23 @@ type routingNode struct {
 	path_segment string
 	is_dynamic   bool
 	// handlers is a map of HTTP methods to handlers
-	handlers map[string]http.Handler
+	handlers map[string]WebServerHandler
 	children map[string]*routingNode
+}
+
+type WebServerHandler func(w io.Writer, r *Request)
+
+type Request struct {
+	Method    string
+	Path      string
+	UrlValues map[string]string
 }
 
 func NewRoutingNode() *routingNode {
 	return newBlankRoutingNode("/", false)
 }
 
-func (ut *routingNode) AddPattern(method string, url string, handler http.Handler) {
+func (ut *routingNode) AddPattern(method string, url string, handler WebServerHandler) {
 	split_url := strings.Split(url, "/")
 	current_node := ut
 	for _, segment := range split_url {
@@ -37,13 +45,13 @@ func (ut *routingNode) AddPattern(method string, url string, handler http.Handle
 }
 
 type handlerWithDynamicContent struct {
-	Handler        http.Handler
-	DynamicContent map[string]interface{}
+	Handler        WebServerHandler
+	DynamicContent map[string]string
 }
 
 func (ut *routingNode) MatchMethodAndPath(method, path string) (*handlerWithDynamicContent, error) {
 	split_url := strings.Split(path, "/")
-	dynamic_content := map[string]interface{}{}
+	dynamic_content := make(map[string]string)
 	current_node := ut
 	for _, segment := range split_url {
 		node, ok := current_node.children[segment]
@@ -69,6 +77,7 @@ func (ut *routingNode) MatchMethodAndPath(method, path string) (*handlerWithDyna
 	if !ok {
 		return nil, fmt.Errorf("no handler found for method %s", method)
 	}
+	fmt.Println("handler", handler)
 	return &handlerWithDynamicContent{
 		Handler:        handler,
 		DynamicContent: dynamic_content,
@@ -76,5 +85,5 @@ func (ut *routingNode) MatchMethodAndPath(method, path string) (*handlerWithDyna
 }
 
 func newBlankRoutingNode(path_segment string, is_dynamic bool) *routingNode {
-	return &routingNode{path_segment: path_segment, is_dynamic: is_dynamic, handlers: make(map[string]http.Handler), children: make(map[string]*routingNode)}
+	return &routingNode{path_segment: path_segment, is_dynamic: is_dynamic, handlers: make(map[string]WebServerHandler), children: make(map[string]*routingNode)}
 }
