@@ -18,14 +18,17 @@ func NewWebServer(rootDir string) *WebServer {
 	return &WebServer{rootDir: rootDir, rn: NewRoutingNode()}
 }
 
-func (ws *WebServer) Run(addr string) error {
+func (ws *WebServer) Run(addr string) (<-chan struct{}, error) {
+	ready := make(chan struct{})
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		return err
+		return ready, err
 	}
 	ws.listener = listener
 	go ws.start()
-	return nil
+	// Signal that the server is ready
+	close(ready)
+	return ready, nil
 }
 
 func (ws *WebServer) start() {

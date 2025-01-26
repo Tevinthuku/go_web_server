@@ -2,6 +2,7 @@ package webserver_test
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -14,12 +15,14 @@ func TestWebServer(t *testing.T) {
 	addr := ":8080"
 
 	wb := webserver.NewWebServer("../www")
-	err := wb.Run(addr)
+	defer wb.Close()
+	testRouteResistration(wb)
+	ready, err := wb.Run(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	defer wb.Close()
+	// wait
+	<-ready
 
 	tests := []struct {
 		name           string
@@ -51,4 +54,19 @@ func TestWebServer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testRouteResistration(ws *webserver.WebServer) {
+	ws.Get("/", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Hello, World!"))
+		response.WriteTo(w)
+	})
+	ws.Get("/index.html", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Mock index.html!"))
+		response.WriteTo(w)
+	})
+	ws.Get("/about.html", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Mock about.html!"))
+		response.WriteTo(w)
+	})
 }

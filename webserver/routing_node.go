@@ -77,7 +77,6 @@ func (ut *routingNode) MatchMethodAndPath(method, path string) (*handlerWithDyna
 	if !ok {
 		return nil, fmt.Errorf("no handler found for method %s", method)
 	}
-	fmt.Println("handler", handler)
 	return &handlerWithDynamicContent{
 		Handler:        handler,
 		DynamicContent: dynamic_content,
