@@ -15,10 +15,9 @@ func main() {
 	defer wb.Close()
 
 	RegisterRoutes(wb)
-	_, err := wb.Run(":8080")
+	err := wb.Run(":8080")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	select {}
 }

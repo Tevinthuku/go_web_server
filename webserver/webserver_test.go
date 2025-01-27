@@ -13,16 +13,8 @@ import (
 func TestWebServer(t *testing.T) {
 
 	addr := ":8080"
-
-	wb := webserver.NewWebServer("../www")
+	wb := setupTestServer(t, addr)
 	defer wb.Close()
-	testRouteResistration(wb)
-	ready, err := wb.Run(addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// wait
-	<-ready
 
 	tests := []struct {
 		name           string
@@ -54,6 +46,21 @@ func TestWebServer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
+	wb := webserver.NewWebServer("../www")
+	testRouteResistration(wb)
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// we set the listener here to avoid running the tests before the server is ready
+	wb.Listener = listener
+	go wb.Run(addr)
+
+	return wb
 }
 
 func testRouteResistration(ws *webserver.WebServer) {

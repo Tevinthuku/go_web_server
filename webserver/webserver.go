@@ -9,7 +9,7 @@ import (
 )
 
 type WebServer struct {
-	listener net.Listener
+	Listener net.Listener
 	rootDir  string
 	rn       *routingNode
 }
@@ -18,22 +18,22 @@ func NewWebServer(rootDir string) *WebServer {
 	return &WebServer{rootDir: rootDir, rn: NewRoutingNode()}
 }
 
-func (ws *WebServer) Run(addr string) (<-chan struct{}, error) {
-	ready := make(chan struct{})
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return ready, err
+func (ws *WebServer) Run(addr string) error {
+	if ws.Listener == nil {
+		listener, err := net.Listen("tcp", addr)
+		if err != nil {
+			return err
+		}
+		ws.Listener = listener
 	}
-	ws.listener = listener
-	go ws.start()
-	// Signal that the server is ready
-	close(ready)
-	return ready, nil
+	ws.start()
+	return nil
+
 }
 
 func (ws *WebServer) start() {
 	for {
-		conn, err := ws.listener.Accept()
+		conn, err := ws.Listener.Accept()
 		if err != nil {
 			log.Println("Error accepting connection:", err)
 			continue
@@ -43,7 +43,7 @@ func (ws *WebServer) start() {
 }
 
 func (ws *WebServer) Close() error {
-	return ws.listener.Close()
+	return ws.Listener.Close()
 }
 
 func (ws *WebServer) handleConnection(conn net.Conn) {
