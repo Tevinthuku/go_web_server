@@ -5,10 +5,11 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 	"web_server/webserver"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWebServer(t *testing.T) {
@@ -16,6 +17,7 @@ func TestWebServer(t *testing.T) {
 	addr := ":8080"
 	wb := setupTestServer(t, addr)
 	defer wb.Close()
+	client := &http.Client{}
 
 	tests := []struct {
 		name           string
@@ -30,21 +32,16 @@ func TestWebServer(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			conn, err := net.Dial("tcp", addr)
+			req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost%s%s", addr, test.path), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer conn.Close()
-			conn.Write([]byte(fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", test.path, addr)))
-
-			response := make([]byte, 1024)
-			_, err = conn.Read(response)
+			resp, err := client.Do(req)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(string(response), fmt.Sprintf("%d %s", test.expectedStatus, http.StatusText(test.expectedStatus))) {
-				t.Errorf("Expected %d %s, got %s", test.expectedStatus, http.StatusText(test.expectedStatus), string(response))
-			}
+			defer resp.Body.Close()
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 		})
 	}
 }
