@@ -2,24 +2,22 @@ package webserver_test
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
-	"strings"
 	"testing"
+	"time"
 	"web_server/webserver"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWebServer(t *testing.T) {
-	listener, err := net.Listen("tcp", "localhost:8080")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer listener.Close()
 
-	addr := listener.Addr().String()
-
-	wb := webserver.NewWebServer(listener, "../www")
-	go wb.Start()
+	addr := ":8080"
+	wb := setupTestServer(t, addr)
+	defer wb.Close()
+	client := &http.Client{}
 
 	tests := []struct {
 		name           string
@@ -34,21 +32,69 @@ func TestWebServer(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			conn, err := net.Dial("tcp", addr)
+			req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost%s%s", addr, test.path), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer conn.Close()
-			conn.Write([]byte(fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", test.path, addr)))
-
-			response := make([]byte, 1024)
-			_, err = conn.Read(response)
+			resp, err := client.Do(req)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(string(response), fmt.Sprintf("%d %s", test.expectedStatus, http.StatusText(test.expectedStatus))) {
-				t.Errorf("Expected %d %s, got %s", test.expectedStatus, http.StatusText(test.expectedStatus), string(response))
-			}
+			defer resp.Body.Close()
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 		})
 	}
+}
+
+func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
+	wb := webserver.NewWebServer("../www")
+	testRouteResistration(wb)
+
+	ready := make(chan struct{})
+	go func() {
+		if err := wb.Run(addr); err != nil {
+			t.Errorf("server error: %v", err)
+		}
+	}()
+
+	// Wait for server to be ready
+	go func() {
+		for i := 0; i < 5; i++ {
+			conn, err := net.Dial("tcp", addr)
+			if err == nil {
+				conn.Close()
+				close(ready)
+				break
+			}
+			time.Sleep(time.Duration(i) * time.Millisecond)
+		}
+	}()
+	select {
+	case <-ready:
+	case <-time.After(2 * time.Second):
+		t.Fatal("server failed to start within timeout")
+	}
+
+	return wb
+}
+
+func testRouteResistration(ws *webserver.WebServer) {
+	ws.Get("/", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Hello, World!"))
+		if _, err := response.WriteTo(w); err != nil {
+			panic(fmt.Sprintf("Failed to write response: %v", err))
+		}
+	})
+	ws.Get("/index.html", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Mock index.html!"))
+		if _, err := response.WriteTo(w); err != nil {
+			panic(fmt.Sprintf("Failed to write response: %v", err))
+		}
+	})
+	ws.Get("/about.html", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Mock about.html!"))
+		if _, err := response.WriteTo(w); err != nil {
+			panic(fmt.Sprintf("Failed to write response: %v", err))
+		}
+	})
 }
