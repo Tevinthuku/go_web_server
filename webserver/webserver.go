@@ -3,6 +3,7 @@ package webserver
 import (
 	"bufio"
 	"errors"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 )
 
 type WebServer struct {
-	Listener net.Listener
+	listener net.Listener
 	rootDir  string
 	rn       *routingNode
 }
@@ -20,13 +21,13 @@ func NewWebServer(rootDir string) *WebServer {
 }
 
 func (ws *WebServer) Run(addr string) error {
-	if ws.Listener == nil {
-		listener, err := net.Listen("tcp", addr)
-		if err != nil {
-			return err
-		}
-		ws.Listener = listener
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
 	}
+	ws.listener = listener
+
 	ws.start()
 	return nil
 
@@ -34,7 +35,7 @@ func (ws *WebServer) Run(addr string) error {
 
 func (ws *WebServer) start() {
 	for {
-		conn, err := ws.Listener.Accept()
+		conn, err := ws.listener.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				log.Println("Listener closed")
@@ -48,7 +49,7 @@ func (ws *WebServer) start() {
 }
 
 func (ws *WebServer) Close() error {
-	return ws.Listener.Close()
+	return ws.listener.Close()
 }
 
 func (ws *WebServer) handleConnection(conn net.Conn) {
@@ -62,6 +63,10 @@ func (ws *WebServer) handleRequest(conn net.Conn) {
 	// GET /path HTTP/1.1
 	requestLine, err := reader.ReadString('\n')
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			log.Println("Client closed connection")
+			return
+		}
 		log.Println("Error reading request line:", err)
 		response := NewResponse(http.StatusBadRequest, []byte("Bad Request"))
 		_, err := response.WriteTo(conn)

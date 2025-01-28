@@ -50,12 +50,6 @@ func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 	wb := webserver.NewWebServer("../www")
 	testRouteResistration(wb)
 
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// we set the listener here to avoid running the tests before the server is ready
-	wb.Listener = listener
 	ready := make(chan struct{})
 	go func() {
 		if err := wb.Run(addr); err != nil {
@@ -65,10 +59,14 @@ func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 
 	// Wait for server to be ready
 	go func() {
-		conn, err := net.Dial("tcp", addr)
-		if err == nil {
-			conn.Close()
-			close(ready)
+		for i := 0; i < 5; i++ {
+			conn, err := net.Dial("tcp", addr)
+			if err == nil {
+				conn.Close()
+				close(ready)
+				break
+			}
+			time.Sleep(time.Duration(i) * time.Millisecond)
 		}
 	}()
 	select {
@@ -83,14 +81,20 @@ func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 func testRouteResistration(ws *webserver.WebServer) {
 	ws.Get("/", func(w io.Writer, r *webserver.Request) {
 		response := webserver.NewResponse(200, []byte("Hello, World!"))
-		response.WriteTo(w)
+		if _, err := response.WriteTo(w); err != nil {
+			panic(fmt.Sprintf("Failed to write response: %v", err))
+		}
 	})
 	ws.Get("/index.html", func(w io.Writer, r *webserver.Request) {
 		response := webserver.NewResponse(200, []byte("Mock index.html!"))
-		response.WriteTo(w)
+		if _, err := response.WriteTo(w); err != nil {
+			panic(fmt.Sprintf("Failed to write response: %v", err))
+		}
 	})
 	ws.Get("/about.html", func(w io.Writer, r *webserver.Request) {
 		response := webserver.NewResponse(200, []byte("Mock about.html!"))
-		response.WriteTo(w)
+		if _, err := response.WriteTo(w); err != nil {
+			panic(fmt.Sprintf("Failed to write response: %v", err))
+		}
 	})
 }

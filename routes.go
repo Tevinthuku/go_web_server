@@ -21,12 +21,18 @@ func aboutPageHandler(w io.Writer, r *webserver.Request) {
 func personHandler(w io.Writer, r *webserver.Request) {
 	id := r.UrlValues["id"]
 	response := webserver.NewResponse(200, []byte("Person with id: "+id))
-	response.WriteTo(w)
+	_, err := response.WriteTo(w)
+	if err != nil {
+		log.Println("Error writing response:", err)
+	}
 }
 
 func peopleHandler(w io.Writer, r *webserver.Request) {
 	response := webserver.NewResponse(200, []byte("People"))
-	response.WriteTo(w)
+	_, err := response.WriteTo(w)
+	if err != nil {
+		log.Println("Error writing response:", err)
+	}
 }
 
 func RegisterRoutes(ws *webserver.WebServer) {
