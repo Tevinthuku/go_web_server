@@ -2,6 +2,7 @@ package webserver
 
 import (
 	"bufio"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -35,6 +36,10 @@ func (ws *WebServer) start() {
 	for {
 		conn, err := ws.Listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				log.Println("Listener closed")
+				break
+			}
 			log.Println("Error accepting connection:", err)
 			continue
 		}
@@ -59,14 +64,20 @@ func (ws *WebServer) handleRequest(conn net.Conn) {
 	if err != nil {
 		log.Println("Error reading request line:", err)
 		response := NewResponse(http.StatusBadRequest, []byte("Bad Request"))
-		response.WriteTo(conn)
+		_, err := response.WriteTo(conn)
+		if err != nil {
+			log.Println("Error writing response:", err)
+		}
 		return
 	}
 	requestLineParts := strings.Split(requestLine, " ")
 	if len(requestLineParts) != 3 {
 		log.Println("Invalid request line:", requestLine)
 		response := NewResponse(http.StatusBadRequest, []byte("Bad Request"))
-		response.WriteTo(conn)
+		_, err := response.WriteTo(conn)
+		if err != nil {
+			log.Println("Error writing response:", err)
+		}
 		return
 	}
 	// the METHOD is the first part and the PATH is the second part of the request line
@@ -75,7 +86,10 @@ func (ws *WebServer) handleRequest(conn net.Conn) {
 	handler, err := ws.rn.MatchMethodAndPath(method, rawPath)
 	if err != nil {
 		response := NewResponse(http.StatusNotFound, []byte("Not Found"))
-		response.WriteTo(conn)
+		_, err := response.WriteTo(conn)
+		if err != nil {
+			log.Println("Error writing response:", err)
+		}
 		return
 	}
 	req := Request{

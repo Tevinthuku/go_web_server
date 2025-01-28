@@ -23,3 +23,15 @@ curl http://localhost:8080/
 ```bash
 curl http://localhost:8080/invalid
 ```
+
+```bash
+curl http://localhost:8080/people
+```
+
+```bash
+curl http://localhost:8080/people/1
+```
+
+```bash
+curl http://localhost:8080/people/2
+```

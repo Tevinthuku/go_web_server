@@ -7,8 +7,8 @@ import (
 )
 
 type routingNode struct {
-	path_segment string
-	is_dynamic   bool
+	pathSegment string
+	isDynamic   bool
 	// handlers is a map of HTTP methods to handlers
 	handlers map[string]WebServerHandler
 	children map[string]*routingNode
@@ -27,21 +27,24 @@ func NewRoutingNode() *routingNode {
 }
 
 func (ut *routingNode) AddPattern(method string, url string, handler WebServerHandler) {
-	split_url := strings.Split(url, "/")
-	current_node := ut
-	for _, segment := range split_url {
-		if _, ok := current_node.children[segment]; ok {
-			current_node = current_node.children[segment]
+	if method == "" || url == "" || handler == nil {
+		panic("method, url and handler must not be empty")
+	}
+	splitURL := strings.Split(url, "/")
+	currentNode := ut
+	for _, segment := range splitURL {
+		if _, ok := currentNode.children[segment]; ok {
+			currentNode = currentNode.children[segment]
 		} else {
-			is_dynamic := strings.HasPrefix(segment, ":")
-			if is_dynamic {
+			isDynamic := strings.HasPrefix(segment, ":")
+			if isDynamic {
 				segment = segment[1:]
 			}
-			current_node.children[segment] = newBlankRoutingNode(segment, is_dynamic)
-			current_node = current_node.children[segment]
+			currentNode.children[segment] = newBlankRoutingNode(segment, isDynamic)
+			currentNode = currentNode.children[segment]
 		}
 	}
-	current_node.handlers[method] = handler
+	currentNode.handlers[method] = handler
 }
 
 type handlerWithDynamicContent struct {
@@ -50,39 +53,45 @@ type handlerWithDynamicContent struct {
 }
 
 func (ut *routingNode) MatchMethodAndPath(method, path string) (*handlerWithDynamicContent, error) {
+	if method == "" || path == "" {
+		return nil, fmt.Errorf("method and path must not be empty")
+	}
 	split_url := strings.Split(path, "/")
-	dynamic_content := make(map[string]string)
-	current_node := ut
+	dynamicContent := make(map[string]string)
+	currentNode := ut
 	for _, segment := range split_url {
-		node, ok := current_node.children[segment]
+		node, ok := currentNode.children[segment]
 		if ok {
-			current_node = node
+			currentNode = node
 			continue
 		} else {
-			found := false
-			for child, node := range current_node.children {
-				if node.is_dynamic {
-					dynamic_content[child] = segment
-					current_node = node
-					found = true
-					break
-				}
-			}
-			if !found {
+			currentNode = currentNode.getChildDynamicRoutingNode()
+			if currentNode == nil {
 				return nil, fmt.Errorf("no handler found for path %s", path)
+			} else {
+				dynamicContent[currentNode.pathSegment] = segment
 			}
 		}
 	}
-	handler, ok := current_node.handlers[method]
+	handler, ok := currentNode.handlers[method]
 	if !ok {
 		return nil, fmt.Errorf("no handler found for method %s", method)
 	}
 	return &handlerWithDynamicContent{
 		Handler:        handler,
-		DynamicContent: dynamic_content,
+		DynamicContent: dynamicContent,
 	}, nil
 }
 
-func newBlankRoutingNode(path_segment string, is_dynamic bool) *routingNode {
-	return &routingNode{path_segment: path_segment, is_dynamic: is_dynamic, handlers: make(map[string]WebServerHandler), children: make(map[string]*routingNode)}
+func (ut *routingNode) getChildDynamicRoutingNode() *routingNode {
+	for _, child := range ut.children {
+		if child.isDynamic {
+			return child
+		}
+	}
+	return nil
+}
+
+func newBlankRoutingNode(pathSegment string, isDynamic bool) *routingNode {
+	return &routingNode{pathSegment: pathSegment, isDynamic: isDynamic, handlers: make(map[string]WebServerHandler), children: make(map[string]*routingNode)}
 }

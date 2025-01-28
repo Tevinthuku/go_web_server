@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 	"web_server/webserver"
 )
 
@@ -58,7 +59,26 @@ func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 	}
 	// we set the listener here to avoid running the tests before the server is ready
 	wb.Listener = listener
-	go wb.Run(addr)
+	ready := make(chan struct{})
+	go func() {
+		if err := wb.Run(addr); err != nil {
+			t.Errorf("server error: %v", err)
+		}
+	}()
+
+	// Wait for server to be ready
+	go func() {
+		conn, err := net.Dial("tcp", addr)
+		if err == nil {
+			conn.Close()
+			close(ready)
+		}
+	}()
+	select {
+	case <-ready:
+	case <-time.After(2 * time.Second):
+		t.Fatal("server failed to start within timeout")
+	}
 
 	return wb
 }
