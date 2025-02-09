@@ -2,16 +2,12 @@ package main
 
 import (
 	"log"
-	"os"
 	"web_server/webserver"
 )
 
 func main() {
-	rootDirEnv := os.Getenv("ROOT_DIR")
-	if rootDirEnv == "" {
-		rootDirEnv = "./www"
-	}
-	wb := webserver.NewWebServer(rootDirEnv)
+
+	wb := webserver.NewWebServer()
 	defer wb.Close()
 
 	RegisterRoutes(wb)

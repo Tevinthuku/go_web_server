@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 	"web_server/webserver"
@@ -24,10 +26,12 @@ func TestWebServer(t *testing.T) {
 		path           string
 		expectedStatus int
 	}{
-		{name: "root", path: "/", expectedStatus: http.StatusOK},
-		{name: "index", path: "/index.html", expectedStatus: http.StatusOK},
-		{name: "about", path: "/about.html", expectedStatus: http.StatusOK},
-		{name: "nonexistent", path: "/nonexistent.html", expectedStatus: http.StatusNotFound},
+		{name: "root", path: "/static/", expectedStatus: http.StatusOK},
+		{name: "index", path: "/static/index.html", expectedStatus: http.StatusOK},
+		{name: "about", path: "/static/about.html", expectedStatus: http.StatusOK},
+		{name: "nonexistent-file", path: "/static/nonexistent.html", expectedStatus: http.StatusNotFound},
+		{name: "languages", path: "/languages", expectedStatus: http.StatusOK},
+		{name: "nonexistent-url", path: "/nonexistent-url", expectedStatus: http.StatusNotFound},
 	}
 
 	for _, test := range tests {
@@ -47,7 +51,7 @@ func TestWebServer(t *testing.T) {
 }
 
 func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
-	wb := webserver.NewWebServer("../www")
+	wb := webserver.NewWebServer()
 	testRouteResistration(wb)
 
 	ready := make(chan struct{})
@@ -79,22 +83,26 @@ func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 }
 
 func testRouteResistration(ws *webserver.WebServer) {
+
 	ws.Get("/", func(w io.Writer, r *webserver.Request) {
 		response := webserver.NewResponse(200, []byte("Hello, World!"))
 		if _, err := response.WriteTo(w); err != nil {
 			panic(fmt.Sprintf("Failed to write response: %v", err))
 		}
 	})
-	ws.Get("/index.html", func(w io.Writer, r *webserver.Request) {
-		response := webserver.NewResponse(200, []byte("Mock index.html!"))
+
+	ws.Get("/languages", func(w io.Writer, r *webserver.Request) {
+		response := webserver.NewResponse(200, []byte("Languages"))
 		if _, err := response.WriteTo(w); err != nil {
 			panic(fmt.Sprintf("Failed to write response: %v", err))
 		}
 	})
-	ws.Get("/about.html", func(w io.Writer, r *webserver.Request) {
-		response := webserver.NewResponse(200, []byte("Mock about.html!"))
-		if _, err := response.WriteTo(w); err != nil {
-			panic(fmt.Sprintf("Failed to write response: %v", err))
-		}
-	})
+
+	// runtime.Caller(0) returns the file path of the current source file (webserver_test.go)
+	// This allows us to construct absolute paths relative to this file's location,
+	// ensuring static files can be found regardless of where the tests are executed from.
+	_, filename, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Join(filepath.Dir(filename), "..")
+	staticFilePath := filepath.Join(projectRoot, "www")
+	ws.Static("/static", staticFilePath)
 }

@@ -12,12 +12,11 @@ import (
 
 type WebServer struct {
 	listener net.Listener
-	rootDir  string
 	rn       *routingNode
 }
 
-func NewWebServer(rootDir string) *WebServer {
-	return &WebServer{rootDir: rootDir, rn: NewRoutingNode()}
+func NewWebServer() *WebServer {
+	return &WebServer{rn: NewRoutingNode()}
 }
 
 func (ws *WebServer) Run(addr string) error {
