@@ -9,15 +9,15 @@ go run .
 #### Testing requests:
 
 ```bash
-curl http://localhost:8080/index.html
+curl http://localhost:8080/static/index.html
 ```
 
 ```bash
-curl http://localhost:8080/about.html
+curl http://localhost:8080/static/about.html
 ```
 
 ```bash
-curl http://localhost:8080/
+curl http://localhost:8080/static
 ```
 
 ```bash

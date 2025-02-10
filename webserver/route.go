@@ -23,3 +23,11 @@ func (ws *WebServer) Delete(path string, handler WebServerHandler) {
 func (ws *WebServer) Patch(path string, handler WebServerHandler) {
 	ws.rn.AddPattern(http.MethodPatch, path, handler)
 }
+
+// relativePath is the base URL path prefix for serving static files (e.g., "/static")
+// dir is the local filesystem directory path containing the static files to serve
+func (ws *WebServer) Static(relativePath, dir string) {
+	handler := staticFsHandler(dir)
+	urlPath := relativePath + "/:filepath"
+	ws.rn.AddPattern(http.MethodGet, urlPath, handler)
+}
