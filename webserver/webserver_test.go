@@ -52,7 +52,7 @@ func TestWebServer(t *testing.T) {
 
 func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 	wb := webserver.NewWebServer()
-	testRouteResistration(wb)
+	testRouteRegistration(wb)
 
 	ready := make(chan struct{})
 	go func() {
@@ -82,7 +82,7 @@ func setupTestServer(t *testing.T, addr string) *webserver.WebServer {
 	return wb
 }
 
-func testRouteResistration(ws *webserver.WebServer) {
+func testRouteRegistration(ws *webserver.WebServer) {
 
 	ws.Get("/", func(w io.Writer, r *webserver.Request) {
 		response := webserver.NewResponse(200, []byte("Hello, World!"))

@@ -30,5 +30,5 @@ func (r *Response) WriteTo(w io.Writer) (int64, error) {
 	body := r.Body
 	body = append(body, []byte("\r\n")...)
 	b, err := w.Write(body)
-	return int64(b), err
+	return int64(b) + n, err
 }
