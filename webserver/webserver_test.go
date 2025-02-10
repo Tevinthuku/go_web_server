@@ -101,7 +101,10 @@ func testRouteResistration(ws *webserver.WebServer) {
 	// runtime.Caller(0) returns the file path of the current source file (webserver_test.go)
 	// This allows us to construct absolute paths relative to this file's location,
 	// ensuring static files can be found regardless of where the tests are executed from.
-	_, filename, _, _ := runtime.Caller(0)
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("Failed to get current file path")
+	}
 	projectRoot := filepath.Join(filepath.Dir(filename), "..")
 	staticFilePath := filepath.Join(projectRoot, "www")
 	ws.Static("/static", staticFilePath)

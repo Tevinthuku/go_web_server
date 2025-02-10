@@ -25,19 +25,16 @@ func staticFsHandler(dir string) WebServerHandler {
 			return
 		}
 		defer file.Close()
-		file_bytes, err := io.ReadAll(file)
-		if err != nil {
-			response := NewResponse(500, []byte("Internal Server Error"))
-			_, err := response.WriteTo(w)
-			if err != nil {
-				log.Println("Error writing response:", err)
-			}
-			return
-		}
-		response := NewResponse(http.StatusOK, file_bytes)
-		_, err = response.WriteTo(w)
+		response := NewResponse(http.StatusOK, nil)
+		_, err = response.WriteHeaderTo(w)
 		if err != nil {
 			log.Println("Error writing response:", err)
+			return
+		}
+		// stream file content directly to the writer
+		if _, err := io.Copy(w, file); err != nil {
+			log.Println("Error writing response:", err)
+			return
 		}
 	}
 }
